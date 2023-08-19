@@ -500,7 +500,7 @@ public:
 		CRGB *pLeds = gfx->GetLEDBuffer();
 		size_t count = gfx->GetLEDCount();
 
-		for (int i = 0; i < count; i++)
+		for (size_t i = 0; i < count; i++)
 			pLeds[i] = m_fillColor;
 
 		return true;
