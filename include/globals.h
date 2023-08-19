@@ -127,6 +127,12 @@ while (WiFi.status() != WL_CONNECTED) \
 
 #define SERIAL_SPEED 115200
 
+#ifdef DEBUG_ESP_PORT
+#define DEBUG_MSG(...) DEBUG_ESP_PORT.printf( __VA_ARGS__ )
+#else
+#define DEBUG_MSG(...)
+#endif
+
 #if (PRINT_LINES == 1)
 #define Print(x) Serial.print(x)
 #define Println(x) Serial.println(x); Serial.flush()

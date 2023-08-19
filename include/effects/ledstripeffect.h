@@ -54,7 +54,7 @@ class LEDStripEffect
 	size_t _cLEDs;
 	String _friendlyName;
 
-    std::shared_ptr<LEDMatrixGFX> _GFX[NUM_CHANNELS];
+    std::shared_ptr<LEDMatrixGFX> _GFX;
 
     inline static double randomDouble(double lower, double upper)
     {
@@ -74,13 +74,14 @@ class LEDStripEffect
 	{
 	}
 
-    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx[NUM_CHANNELS])				// There are up to 8 channel in play per effect and when we
-    {																//   start up, we are given copies to their graphics interfaces
-        for (int i = 0; i < NUM_CHANNELS; i++)						//   so that we can call them directly later from other calls
-        {
-            _GFX[i] = gfx[i];    
-        }
-        _cLEDs = _GFX[0]->GetLEDCount();      
+    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx)			
+	{
+		// There are up to 8 channel in play per effect and when we
+		//   start up, we are given copies to their graphics interfaces
+		//   so that we can call them directly later from other calls
+
+		_GFX = gfx;    
+        _cLEDs = _GFX->GetLEDCount();      
 		//Serial.printf("Init Effect %s with %d LEDs\n", _friendlyName.c_str(), _cLEDs);
 		return true;  
     }
@@ -157,12 +158,9 @@ class LEDStripEffect
 
 	inline void fadePixelToBlackOnAllChannelsBy(int pixel, uint8_t fadeValue) const
 	{
-		for (int i = 0; i < NUM_CHANNELS; i++)
-		{
-			CRGB crgb = _GFX[i]->getPixel(pixel);
-			crgb.fadeToBlackBy(fadeValue);
-        	_GFX[i]->GetLEDBuffer()[pixel] = crgb;
-		}
+		CRGB crgb = _GFX->getPixel(pixel);
+		crgb.fadeToBlackBy(fadeValue);
+		_GFX->GetLEDBuffer()[pixel] = crgb;
 	}
 
 	inline void fadeAllChannelsToBlackBy(uint8_t fadeValue) const
@@ -203,14 +201,13 @@ class LEDStripEffect
 
 	inline CRGB getPixel(int pixel) const
 	{
-		return _GFX[0]->getPixel(pixel, 0);
+		return _GFX->getPixel(pixel, 0);
 	}
 
 	// setPixels - Draw pixels with floating point accuracy by dimming/fading the lead/exit pixels
 
 	inline void setPixels(float fPos, float count, CRGB c, bool bMerge = false) const
-	{		
-		for (int i = 0; i < NUM_CHANNELS; i++)
-			_GFX[i]->setPixels(fPos, count, c, bMerge);
+	{
+		_GFX->setPixels(fPos, count, c, bMerge);
 	}
 };

@@ -9,6 +9,8 @@
 #include "effectsManager.h"
 #include "IErrorReported.h"
 
+#include "vector"
+
 enum WorkMode
 {
 	NORMAL = 0,
@@ -20,12 +22,19 @@ class CWorkingStation : public IErrorReporter
 public:
 	CWorkingStation()
 		: m_client(m_espClient)
-		, m_effects()
 	{
 	};
 
 	virtual ~CWorkingStation()
 	{
+		for (int i = 0; i < NUM_CHANNELS; i++)
+		{
+			EffectsManager* pEffect = m_vecEffects.at(i);
+			delete pEffect;
+		}
+
+		m_vecEffects.clear();
+
 		if (m_ssid)
 			delete[] m_ssid;
 
@@ -39,22 +48,20 @@ public:
 	virtual void ReportError(String err);
 
 private:
-
 	bool ReconnectMQTT();
 	void ConnectToWifi();
 	void PublishCurrPlayEffect();
 
-	void MQTT_Callback(char* topic, uint8_t* payload, unsigned int length);
+	void MQTT_Callback(char *topic, uint8_t *payload, unsigned int length);
 
-	void NullTerminateArray(void* src, uint8_t len, void** dest);
+	void NullTerminateArray(void *src, uint8_t len, void **dest);
 
 private:
-
-	char* m_ssid;
-	char* m_psk;
+	char *m_ssid;
+	char *m_psk;
 
 	PubSubClient m_client;
 	WiFiClient m_espClient;
 
-	EffectsManager m_effects;
+	std::vector<EffectsManager *> m_vecEffects;
 };

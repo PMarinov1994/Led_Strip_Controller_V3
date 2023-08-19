@@ -164,7 +164,7 @@ public:
 class MeteorEffect : public LEDStripEffect
 {
   private:
-	MeteorChannel   _Meteors[NUM_CHANNELS];
+	MeteorChannel   _Meteors;
     std::shared_ptr<LEDMatrixGFX> * _gfx;
 
 	int				_cMeteors;
@@ -184,20 +184,19 @@ class MeteorEffect : public LEDStripEffect
 		_meteorSpeedMax = maxSpeed;
     }
 
-    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx[NUM_CHANNELS])	
+    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx)	
     {
-        _gfx = gfx;
+        _gfx = &gfx;
         if (!LEDStripEffect::Init(gfx))
             return false;
-        for (size_t i = 0; i < ARRAYSIZE(_Meteors); i++)
-            _Meteors[i].Init(gfx[i], _cMeteors, _meteorSize, _meteorTrailDecay, _meteorSpeedMin, _meteorSpeedMax);
+        
+		_Meteors.Init(gfx, _cMeteors, _meteorSize, _meteorTrailDecay, _meteorSpeedMin, _meteorSpeedMax);
         return true;
     }
 
 	virtual void Draw() 
     {
-        for (size_t i = 0; i < ARRAYSIZE(_Meteors); i++)
-            _Meteors[i].Draw(_gfx[i]);
+		_Meteors.Draw(*_gfx);
     }
 	
     virtual const char * FriendlyName() const

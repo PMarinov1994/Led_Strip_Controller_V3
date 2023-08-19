@@ -5,14 +5,22 @@
 struct CRGB;
 
 /*
-*	\brief Initialize the component
-*
-*/
+ *	\brief Initialize the component
+ *
+ */
 bool CWorkingStation::Init()
 {
-    m_effects.init(this);
-    m_effects.onWiFiStatusChanged(false);
-    m_effects.loop();
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        EffectsManager* pEffectsManager = new EffectsManager(i);
+
+        pEffectsManager->init(this);
+        pEffectsManager->onWiFiStatusChanged(false);
+        pEffectsManager->onMqttStatusChanged(false);
+        pEffectsManager->loop();
+
+        m_vecEffects.push_back(pEffectsManager);
+    }
 
     CConfigurationFile configFile;
     configFile.ParseConfiguration();
@@ -34,16 +42,16 @@ bool CWorkingStation::Init()
     memcpy(m_psk, configFile.m_psk, pskLen);
 
     ConnectToWifi();
-    m_effects.onWiFiStatusChanged(true);
 
-    m_effects.onMqttStatusChanged(false);
-    m_effects.loop();
+    m_vecEffects.at(0)->onWiFiStatusChanged(true);
+    m_vecEffects.at(0)->onMqttStatusChanged(false);
+    m_vecEffects.at(0)->loop();
 
     IPAddress mqttServerIPAddr;
     mqttServerIPAddr.fromString(configFile.m_mqttServerIP);
 
     m_client.setServer(mqttServerIPAddr, configFile.m_mqttServerPort);
-    
+
     MQTT_CALLBACK_SIGNATURE = std::bind(
         &CWorkingStation::MQTT_Callback,
         this,
@@ -55,8 +63,9 @@ bool CWorkingStation::Init()
 
     // Connect to MQTT Broker.
     ReconnectMQTT();
-    m_effects.onMqttStatusChanged(true);
-    m_effects.loop();
+
+    m_vecEffects.at(0)->onMqttStatusChanged(true);
+    m_vecEffects.at(0)->loop();
 
     return true;
 }
@@ -64,46 +73,47 @@ bool CWorkingStation::Init()
 uint8_t uiLedState = LOW;
 
 /*
-*	\brief This will loop in main
-*/
+ *	\brief This will loop in main
+ */
 void CWorkingStation::Work()
 {
     // Check WiFi state
     // and if down - try to reconnect
     if (WL_CONNECTED != WiFi.status())
     {
-        m_effects.onWiFiStatusChanged(false);
-        m_effects.loop(); // Loop the effects to redraw the error since we will be blocking untill reconnection
+        m_vecEffects.at(0)->onWiFiStatusChanged(false);
+        m_vecEffects.at(0)->loop(); // Loop the effects to redraw the error since we will be blocking untill reconnection
 
         Print("WIFI DOWN! Reconnecting");
         WIFI_WAIT_FOR_CONNECTION
 
-        m_effects.onWiFiStatusChanged(true);
+        m_vecEffects.at(0)->onWiFiStatusChanged(true);
     }
     else if (!m_client.connected())
     {
-        m_effects.onMqttStatusChanged(false);
-        m_effects.loop(); // Loop the effects to redraw the error since we will be blocking untill reconnection
+        m_vecEffects.at(0)->onMqttStatusChanged(false);
+        m_vecEffects.at(0)->loop(); // Loop the effects to redraw the error since we will be blocking untill reconnection
 
         Println("MQTT Client is disconnected. Will try to reconnect in a moment.");
         this->ReconnectMQTT();
 
-        m_effects.onMqttStatusChanged(true);
+        m_vecEffects.at(0)->onMqttStatusChanged(true);
     }
     else
     {
         m_client.loop();
-        m_effects.loop();
+
+        for (int i = 0; i < NUM_CHANNELS; i++)
+            m_vecEffects.at(i)->loop();
     }
 
     //
     // delay(10);
 }
 
-
 /*
 ********************** MQTT ERRORS **********************
-* 
+*
 * TODO: This needs to be made into map and returned somewhere.
     -4 : MQTT_CONNECTION_TIMEOUT - the server didn't respond within the keepalive time
     -3 : MQTT_CONNECTION_LOST - the network connection was broken
@@ -118,8 +128,8 @@ void CWorkingStation::Work()
 */
 
 /*
-*	\brief This will loop in main
-*/
+ *	\brief This will loop in main
+ */
 bool CWorkingStation::ReconnectMQTT()
 {
     unsigned long ulRestartTime = ELAPSED_SECONDS + WAIT_BEFORE_RESTART_SEC;
@@ -165,8 +175,6 @@ bool CWorkingStation::ReconnectMQTT()
     return true;
 }
 
-
-
 void CWorkingStation::ConnectToWifi()
 {
     WiFi.mode(WIFI_STA);
@@ -190,19 +198,26 @@ void CWorkingStation::PublishCurrPlayEffect()
     if (!m_client.connected())
         return;
 
-    bool pubStateResult = m_client.publish(reportCurrEffectTopic, m_effects.getCurrEffectName().c_str() , false);
+    String strEffects = "";
+    String strBrightness = "";
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        EffectsManager* pEffectsManager = m_vecEffects.at(i);
+        strEffects += pEffectsManager->getCurrEffectName() + "\n";
+        strBrightness += String(pEffectsManager->getBrightnes()) + "\n";
+    }
+
+    bool pubStateResult = m_client.publish(reportCurrEffectTopic, strEffects.c_str(), false);
     Print("Publishing curr play effect. Result: ");
     Println(pubStateResult);
 
-    pubStateResult &= m_client.publish(reportCurrBrightnessTopic, String(m_effects.getBrightnes()).c_str() , false);
+    pubStateResult &= m_client.publish(reportCurrBrightnessTopic, strBrightness.c_str(), false);
     Print("Publishing curr brightness. Result: ");
     Println(pubStateResult);
 
     if (!pubStateResult)
         ESP.restart();
 }
-
-
 
 void CWorkingStation::ReportError(String err)
 {
@@ -215,9 +230,7 @@ void CWorkingStation::ReportError(String err)
     Println(pubStateResult);
 }
 
-
-
-void CWorkingStation::MQTT_Callback(char* topic, uint8_t* payload, unsigned int length)
+void CWorkingStation::MQTT_Callback(char *topic, uint8_t *payload, unsigned int length)
 {
     if (0 == length)
         return;
@@ -227,26 +240,40 @@ void CWorkingStation::MQTT_Callback(char* topic, uint8_t* payload, unsigned int 
 
     if (0 == strcmp(topic, setEffectTopic))
     {
-        char* buff;
+        char *buff;
         NullTerminateArray(payload, length, (void **)&buff);
-        
+
         String value(buff);
-        delete[] buff;        
+        delete[] buff;
 
         Println("Message:");
         Println(value);
-        m_effects.changeEffect(value);
+
+        // Notify each effects manager. The correct channel is inside the JSON payload.
+        // Channels will check if the payload is for them and if not they will ignore it.
+        for (int i = 0; i < NUM_CHANNELS; i++)
+            m_vecEffects.at(i)->changeEffect(value);
 
         PublishCurrPlayEffect();
     }
     else if (0 == strcmp(topic, setBrightnessTopic))
     {
-        char* buff = new char[length + 1];
+        char *buff = new char[length + 1];
         NullTerminateArray(payload, length, (void **)&buff);
 
         int value = strtol(buff, NULL, 10);
-        if (value >= 0 && value <= 255)
-            m_effects.setBrightnes(value);
+
+        int iChannelNum = value / 1000;
+        int iChannelValue = value % 1000;
+
+        if (iChannelValue >= 0 && iChannelValue <= 255)
+        {
+            if (iChannelNum == 0)
+                for (int i = 0; i < NUM_CHANNELS; i++)
+                    m_vecEffects.at(i)->setBrightnes(iChannelValue);
+            else if (iChannelNum > 0 && iChannelNum <= NUM_CHANNELS)
+                m_vecEffects.at(iChannelNum - 1)->setBrightnes(iChannelValue);
+        }
 
         Println("Message:");
         Println(value);
@@ -256,10 +283,9 @@ void CWorkingStation::MQTT_Callback(char* topic, uint8_t* payload, unsigned int 
     }
 }
 
-
-void CWorkingStation::NullTerminateArray(void* src, uint8_t len, void** dest)
+void CWorkingStation::NullTerminateArray(void *src, uint8_t len, void **dest)
 {
-    if (((char*)src)[len - 1] != '\0')
+    if (((char *)src)[len - 1] != '\0')
     {
         *dest = new char[len + 1];
         memset(*dest, 0, len + 1);

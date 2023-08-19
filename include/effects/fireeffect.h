@@ -116,7 +116,7 @@ class FireEffect : public LEDStripEffect
 
     virtual void Draw()
     {
-        FastLED.clear(false);
+        _GFX->clearPixels();
         DrawFire();
     }
 
@@ -283,8 +283,7 @@ public:
             setPixelHeatColor(j, heat[j]);
         }
 
-        for (int channel = 0; channel < NUM_CHANNELS; channel++)
-           blur1d(_GFX[channel]->GetLEDBuffer(), _cLEDs, 255);
+        blur1d(_GFX->GetLEDBuffer(), _cLEDs, 255);
     }
 
     void setPixelWithMirror(int Pixel, CRGB temperature)
@@ -374,7 +373,7 @@ public:
     {
     }
 
-    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx[NUM_CHANNELS])
+    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx)
     {
         LEDStripEffect::Init(gfx);
         _Temperatures = (float *)malloc(sizeof(float) * _cLEDs);
@@ -549,7 +548,7 @@ class BaseFireEffect : public LEDStripEffect
 
     virtual void Draw()
     {
-        FastLED.clear();
+        _GFX->clearPixels();
         DrawFire();
         delay(120);
     }

@@ -2,7 +2,7 @@
 //
 // File:        effects.cpp
 //
-// NightDriverStrip - (c) 2018 Plummer's Software LLC.  All Rights Reserved.  
+// NightDriverStrip - (c) 2018 Plummer's Software LLC.  All Rights Reserved.
 //
 // This file is part of the NightDriver software project.
 //
@@ -10,12 +10,12 @@
 //    it under the terms of the GNU General Public License as published by
 //    the Free Software Foundation, either version 3 of the License, or
 //    (at your option) any later version.
-//   
+//
 //    NightDriver is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //    GNU General Public License for more details.
-//   
+//
 //    You should have received a copy of the GNU General Public License
 //    along with Nightdriver.  It is normally found in copying.txt
 //    If not, see <https://www.gnu.org/licenses/>.
@@ -27,15 +27,15 @@
 // History:     Jul-14-2021         Davepl      Split off from main.cpp
 //---------------------------------------------------------------------------
 
-#include "globals.h"                            // CONFIG and global headers
-#include "effects/bouncingballeffect.h"         // bouincing ball effectsenable+
-#include "effects/doublepaletteeffect.h"        // double palette effect
-#include "effects/fireeffect.h"                 // fire effects
-#include "effects/meteoreffect.h"               // meteor blend effect
+#include "globals.h"                     // CONFIG and global headers
+#include "effects/bouncingballeffect.h"  // bouincing ball effectsenable+
+#include "effects/doublepaletteeffect.h" // double palette effect
+#include "effects/fireeffect.h"          // fire effects
+#include "effects/meteoreffect.h"        // meteor blend effect
 #include "effects/misceffects.h"
-#include "effects/paletteeffect.h"              // palette effects
+#include "effects/paletteeffect.h" // palette effects
 #include "effects/particles.h"
-#include "effects/stareffect.h"                 // star effects
+#include "effects/stareffect.h" // star effects
 
 #include "effectsFactory.h"
 #include <ArduinoJson.h>
@@ -45,203 +45,196 @@
 // Externals
 //
 
-extern std::shared_ptr<LEDMatrixGFX>  g_pStrands[NUM_CHANNELS];
+// extern std::shared_ptr<LEDMatrixGFX> m_pLedStrip;
 
 // Palettes
 //
 // Palettes that are referenced by effects need to be instantiated first
 
-
 CRGBPalette256 BlueColors_p =
-{
-    CRGB::DarkBlue,
-    CRGB::MediumBlue,
-    CRGB::Blue,
-    CRGB::MediumBlue,
-    CRGB::DarkBlue,
-    CRGB::MediumBlue,
-    CRGB::Blue,
-    CRGB::MediumBlue,
-    CRGB::DarkBlue,
-    CRGB::MediumBlue,
-    CRGB::Blue,
-    CRGB::MediumBlue,
-    CRGB::DarkBlue,
-    CRGB::MediumBlue,
-    CRGB::Blue,
-    CRGB::MediumBlue
-};
+    {
+        CRGB::DarkBlue,
+        CRGB::MediumBlue,
+        CRGB::Blue,
+        CRGB::MediumBlue,
+        CRGB::DarkBlue,
+        CRGB::MediumBlue,
+        CRGB::Blue,
+        CRGB::MediumBlue,
+        CRGB::DarkBlue,
+        CRGB::MediumBlue,
+        CRGB::Blue,
+        CRGB::MediumBlue,
+        CRGB::DarkBlue,
+        CRGB::MediumBlue,
+        CRGB::Blue,
+        CRGB::MediumBlue};
 
 CRGBPalette256 RedColors_p =
-{
-    CRGB::Red,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
+    {
+        CRGB::Red,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
 
-    CRGB::Red,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
+        CRGB::Red,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
 
-    CRGB::Red,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
+        CRGB::Red,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
 
-    CRGB::Red,
-    CRGB::DarkRed,
-    CRGB::DarkRed,
-    CRGB::OrangeRed,
+        CRGB::Red,
+        CRGB::DarkRed,
+        CRGB::DarkRed,
+        CRGB::OrangeRed,
 };
 
 CRGBPalette256 GreenColors_p =
-{
-    CRGB::Green,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
+    {
+        CRGB::Green,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
 
-    CRGB::Green,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
+        CRGB::Green,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
 
-    CRGB::Green,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
+        CRGB::Green,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
 
-    CRGB::Green,
-    CRGB::DarkGreen,
-    CRGB::DarkGreen,
-    CRGB::LimeGreen,
+        CRGB::Green,
+        CRGB::DarkGreen,
+        CRGB::DarkGreen,
+        CRGB::LimeGreen,
 };
 
 CRGBPalette256 PurpleColors_p =
-{
-    CRGB::Purple,
-    CRGB::Maroon,
-    CRGB::Violet,
-    CRGB::DarkViolet,
+    {
+        CRGB::Purple,
+        CRGB::Maroon,
+        CRGB::Violet,
+        CRGB::DarkViolet,
 
-    CRGB::Purple,
-    CRGB::Maroon,
-    CRGB::Violet,
-    CRGB::DarkViolet,
+        CRGB::Purple,
+        CRGB::Maroon,
+        CRGB::Violet,
+        CRGB::DarkViolet,
 
-    CRGB::Purple,
-    CRGB::Maroon,
-    CRGB::Violet,
-    CRGB::DarkViolet,
+        CRGB::Purple,
+        CRGB::Maroon,
+        CRGB::Violet,
+        CRGB::DarkViolet,
 
-    CRGB::Pink,
-    CRGB::Maroon,
-    CRGB::Violet,
-    CRGB::DarkViolet,
+        CRGB::Pink,
+        CRGB::Maroon,
+        CRGB::Violet,
+        CRGB::DarkViolet,
 };
 
-CRGBPalette256 RGBColors_p = 
-{
-    CRGB::Red,
-    CRGB::Green,
-    CRGB::Blue,
-    CRGB::Red,
-    CRGB::Green,
-    CRGB::Blue,
-    CRGB::Red,
-    CRGB::Green,
-    CRGB::Blue,
-    CRGB::Red,
-    CRGB::Green,
-    CRGB::Blue,
-    CRGB::Red,
-    CRGB::Green,
-    CRGB::Blue,
-    CRGB::Blue
+CRGBPalette256 RGBColors_p =
+    {
+        CRGB::Red,
+        CRGB::Green,
+        CRGB::Blue,
+        CRGB::Red,
+        CRGB::Green,
+        CRGB::Blue,
+        CRGB::Red,
+        CRGB::Green,
+        CRGB::Blue,
+        CRGB::Red,
+        CRGB::Green,
+        CRGB::Blue,
+        CRGB::Red,
+        CRGB::Green,
+        CRGB::Blue,
+        CRGB::Blue};
+
+CRGBPalette256 MagentaColors_p =
+    {
+        CRGB::Pink,
+        CRGB::DeepPink,
+        CRGB::HotPink,
+        CRGB::LightPink,
+        CRGB::LightCoral,
+        CRGB::Purple,
+        CRGB::MediumPurple,
+        CRGB::Magenta,
+        CRGB::DarkMagenta,
+        CRGB::DarkSalmon,
+        CRGB::MediumVioletRed,
+        CRGB::Pink,
+        CRGB::DeepPink,
+        CRGB::HotPink,
+        CRGB::LightPink,
+        CRGB::Magenta};
+
+CRGBPalette256 spectrumBasicColors =
+    {
+        CRGB(0xFD0E35), // Red
+        CRGB(0xFF8833), // Orange
+        CRGB(0xFFEB00), // Middle Yellow
+        CRGB(0xAFE313), // Inchworm
+        CRGB(0x3AA655), // Green
+        CRGB(0x8DD9CC), // Middle Blue Green
+        CRGB(0x0066FF), // Blue III
+        CRGB(0xDB91EF), // Lilac
+        CRGB(0xFD0E35), // Red
+        CRGB(0xFF8833), // Orange
+        CRGB(0xFFEB00), // Middle Yellow
+        CRGB(0xAFE313), // Inchworm
+        CRGB(0x3AA655), // Green
+        CRGB(0x8DD9CC), // Middle Blue Green
+        CRGB(0x0066FF), // Blue III
+        CRGB(0xDB91EF)  // Lilac
 };
 
-CRGBPalette256 MagentaColors_p = 
-{
-    CRGB::Pink,
-    CRGB::DeepPink,
-    CRGB::HotPink,
-    CRGB::LightPink,
-    CRGB::LightCoral,
-    CRGB::Purple,
-    CRGB::MediumPurple,
-    CRGB::Magenta,
-    CRGB::DarkMagenta,
-    CRGB::DarkSalmon,
-    CRGB::MediumVioletRed,
-    CRGB::Pink,
-    CRGB::DeepPink,
-    CRGB::HotPink,
-    CRGB::LightPink,
-    CRGB::Magenta
+CRGBPalette256 BGColors_p =
+    {
+        CRGB::White,
+        CRGB::White,
+        CRGB::White,
+        CRGB::White,
+        CRGB::White,
+        CRGB::White,
+        CRGB::Green,
+        CRGB::Green,
+        CRGB::Green,
+        CRGB::Green,
+        CRGB::Green,
+        CRGB::Red,
+        CRGB::Red,
+        CRGB::Red,
+        CRGB::Red,
+        CRGB::Red,
 };
-
-CRGBPalette256 spectrumBasicColors  =
-{
-	CRGB(0xFD0E35),                     // Red
-	CRGB(0xFF8833),                     // Orange
-	CRGB(0xFFEB00),                     // Middle Yellow
-	CRGB(0xAFE313),                     // Inchworm
-    CRGB(0x3AA655),                     // Green
-    CRGB(0x8DD9CC),                     // Middle Blue Green
-    CRGB(0x0066FF),                     // Blue III
-    CRGB(0xDB91EF),                     // Lilac
-    CRGB(0xFD0E35),                     // Red
-	CRGB(0xFF8833),                     // Orange
-	CRGB(0xFFEB00),                     // Middle Yellow
-	CRGB(0xAFE313),                     // Inchworm
-    CRGB(0x3AA655),                     // Green
-    CRGB(0x8DD9CC),                     // Middle Blue Green
-    CRGB(0x0066FF),                     // Blue III
-    CRGB(0xDB91EF)                      // Lilac
-};
-
-CRGBPalette256 BGColors_p  =
-{	
-    CRGB::White, 						
-    CRGB::White,
-    CRGB::White,
-    CRGB::White,
-    CRGB::White,
-    CRGB::White,
-    CRGB::Green,
-    CRGB::Green,
-    CRGB::Green,
-    CRGB::Green,
-    CRGB::Green,
-    CRGB::Red,
-    CRGB::Red,
-    CRGB::Red,
-    CRGB::Red,
-    CRGB::Red,
-};
-
 
 // AllEffects
 //
 // The master effects table
 
-
 CRGBPalette256 rainbowPalette(RainbowColors_p);
 CRGBPalette256 blueSweep(CRGB::Blue, CRGB::Green);
 
-CRGBPalette256 BlueStripes(CRGB::White, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::White, CRGB::Black, CRGB::Black, 
+CRGBPalette256 BlueStripes(CRGB::White, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::White, CRGB::Black, CRGB::Black,
                            CRGB::White, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::White, CRGB::Black, CRGB::Black);
 
-CRGBPalette256 MagentaStripes(CRGB::White, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::White, CRGB::Black, CRGB::Black, 
-                           CRGB::White, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::White, CRGB::Black, CRGB::Black);
-
+CRGBPalette256 MagentaStripes(CRGB::White, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::White, CRGB::Black, CRGB::Black,
+                              CRGB::White, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::Magenta, CRGB::White, CRGB::Black, CRGB::Black);
 
 #define STARRYNIGHT_PROBABILITY 1.0
 #define STARRYNIGHT_MUSICFACTOR 1.0
 
 // AllEffects
-// 
+//
 // A list of internal effects, if any.
 /*
 LEDStripEffect * AllEffects[] =
@@ -257,10 +250,10 @@ LEDStripEffect * AllEffects[] =
     // new PaletteFlameEffect("Smooth Purple Fire", purpleflame_pal),
     new BouncingBallEffect(),
     new MeteorEffect(),                                                                                                     // Our overlapping color meteors
-    
+
 
     new SimpleRainbowTestEffect(8, 4),                                                                            // Rainbow palette simple test of walking pixels
-    
+
     new DoublePaletteEffect(),
     new ColorFillEffect(CRGB::White, 1),
     new RainbowFillEffect(60, 0),
@@ -279,14 +272,14 @@ LEDStripEffect * AllEffects[] =
     // new PaletteFlameEffect("Smooth Purple Fire", purpleflame_pal),
 
     new MeteorEffect(),                                                                                                     // Our overlapping color meteors
-    
+
 
 
     //        new VUFlameEffect("Sound Flame (Green)",    VUFlameEffect::GREEN),
     //       new VUFlameEffect("Sound Flame (Blue)",     VUFlameEffect::BLUE),
 
     new SimpleRainbowTestEffect(8, 4),                                                                            // Rainbow palette simple test of walking pixels
-    
+
     new DoublePaletteEffect(),
 
     // new PaletteFlameEffect("Smooth Red Fire", heatmap_pal, true, 4.5, 1, 1, 255, 4, false),
@@ -319,16 +312,16 @@ LEDStripEffect * AllEffects[] =
     new RainbowFillEffect(24, 0),
     new RainbowFillEffect(32, 1),
     new SimpleRainbowTestEffect(8, 1),  // Rainbow palette simple test of walking pixels
-    
-    new DoublePaletteEffect(),        
+
+    new DoublePaletteEffect(),
 
 };
 */
 
-bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect)
+bool EffectsFactory::CreateEffect(String jsonParams, int8_t *piChannel, LEDStripEffect **poutEffect)
 {
     const int capacity = JSON_OBJECT_SIZE(15);
-    
+
     Print("JSON capacity (in bytes) = ");
     Println(capacity);
 
@@ -336,14 +329,14 @@ bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect
 
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, jsonParams);
-    
+
     bool result = true;
 
     // Test if parsing succeeds.
     // TODO We can publish the error or something
-    if (error) 
+    if (error)
     {
-        m_strLastError = "deserializeJson() failed: " +  String(error.f_str());
+        m_strLastError = "deserializeJson() failed: " + String(error.f_str());
         Println(m_strLastError);
 
         result = false;
@@ -352,7 +345,7 @@ bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect
     {
         Println("ERROR: JSON no 'name' found.");
         m_strLastError = "Effect name is missing.";
-        
+
         result = false;
     }
 
@@ -361,6 +354,8 @@ bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect
         doc.clear();
         return false;
     }
+
+    *piChannel = doc["channel"] | -1;
 
     String effectName = doc["name"];
     if (effectName == "TwinkleStarEffect")
@@ -436,7 +431,7 @@ bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect
     {
         Println("JSON: name = PaletteFlameEffect");
 
-        CRGBPalette256* palette;
+        CRGBPalette256 *palette;
         String paletteName = doc["palette"] | String("RGB");
         this->GetPaletterFromString(paletteName, &palette);
 
@@ -501,13 +496,23 @@ bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect
         bool mirrored = doc["mirrored"] | false;
         int ballSize = doc["ballSize"] | 5;
 
-        *poutEffect = new BouncingBallEffect(ballCount, mirrored, true, ballSize);        
+        *poutEffect = new BouncingBallEffect(ballCount, mirrored, true, ballSize);
+    }
+    else if (effectName == "SolidFill")
+    {
+        Println("JSON: name = SolidFill");
+
+        uint8_t ir = doc["red"] | 255;
+        uint8_t ig = doc["green"] | 255;
+        uint8_t ib = doc["blue"] | 255;
+
+        *poutEffect = new SolidFillEffect(ir, ig, ib);
     }
     else
     {
         m_strLastError = "Effect " + effectName + " does not exists.";
         Println(m_strLastError);
-        
+
         result = false;
     }
 
@@ -515,16 +520,16 @@ bool EffectsFactory::CreateEffect(String jsonParams, LEDStripEffect** poutEffect
     return result;
 }
 
-bool EffectsFactory::CreatePaletterEffect(StaticJsonDocument<JSON_DOC_SIZE>* doc, LEDStripEffect** poutEffect)
+bool EffectsFactory::CreatePaletterEffect(StaticJsonDocument<JSON_DOC_SIZE> *doc, LEDStripEffect **poutEffect)
 {
     if (doc->containsKey("buildIn"))
     {
         String buildIn = doc->getMember("buildIn");
 
         if (buildIn == "Rainbow2")
-            *poutEffect = new PaletteEffect(RainbowColors_p);                 // Rainbow palette
+            *poutEffect = new PaletteEffect(RainbowColors_p); // Rainbow palette
         else if (buildIn == "Rainbow")
-            *poutEffect = new PaletteEffect(MagentaColors_p);                 // Rainbow palette
+            *poutEffect = new PaletteEffect(MagentaColors_p); // Rainbow palette
         else if (buildIn == "RanbowSimple")
             *poutEffect = new PaletteEffect(rainbowPalette, 256 / 16, .2, 0); // Simple rainbow pallette
         else
@@ -537,14 +542,14 @@ bool EffectsFactory::CreatePaletterEffect(StaticJsonDocument<JSON_DOC_SIZE>* doc
     }
 
     String paletteName = doc->getMember("palette") | "RGB";
-    CRGBPalette256* palette;
+    CRGBPalette256 *palette;
     this->GetPaletterFromString(paletteName, &palette);
 
     *poutEffect = new PaletteEffect(*palette);
     return true;
 }
 
-bool EffectsFactory::CreateStarryNightEffect(StaticJsonDocument<JSON_DOC_SIZE>* doc, LEDStripEffect** poutEffect)
+bool EffectsFactory::CreateStarryNightEffect(StaticJsonDocument<JSON_DOC_SIZE> *doc, LEDStripEffect **poutEffect)
 {
     if (doc->containsKey("buildIn"))
     {
@@ -561,7 +566,7 @@ bool EffectsFactory::CreateStarryNightEffect(StaticJsonDocument<JSON_DOC_SIZE>* 
         else if (buildIn == "Red Twinkle")
             *poutEffect = new StarryNightEffect<QuietStar>("Red Twinkle Stars", MagentaColors_p, 1.0, 1, LINEARBLEND, 2.0); // Red Twinkle
         else if (buildIn == "Lava Stars")
-            *poutEffect = new StarryNightEffect<Star>("Lava Stars", MagentaColors_p, STARRYNIGHT_PROBABILITY, 1, LINEARBLEND, 2.0, 0.0, STARRYNIGHT_MUSICFACTOR); // Lava Stars        
+            *poutEffect = new StarryNightEffect<Star>("Lava Stars", MagentaColors_p, STARRYNIGHT_PROBABILITY, 1, LINEARBLEND, 2.0, 0.0, STARRYNIGHT_MUSICFACTOR); // Lava Stars
         else if (buildIn == "Blooming Little Rainbow Stars")
             *poutEffect = new StarryNightEffect<BubblyStar>("Little Blooming Rainbow Stars", MagentaColors_p, STARRYNIGHT_PROBABILITY, 4, LINEARBLEND, 2.0, 0.0, STARRYNIGHT_MUSICFACTOR); // Blooming Little Rainbow Stars
         else if (buildIn == "Blooming Rainbow Stars")
@@ -574,18 +579,18 @@ bool EffectsFactory::CreateStarryNightEffect(StaticJsonDocument<JSON_DOC_SIZE>* 
             *poutEffect = new StarryNightEffect<BubblyStar>("Little Blooming Rainbow Stars", BlueColors_p, STARRYNIGHT_PROBABILITY, 4, LINEARBLEND, 2.0, 0.0, STARRYNIGHT_MUSICFACTOR); // Blooming Little Rainbow Stars
         else if (buildIn == "Green Twinkle Stars")
             *poutEffect = new StarryNightEffect<QuietStar>("Green Twinkle Stars", GreenColors_p, STARRYNIGHT_PROBABILITY, 1, LINEARBLEND, 2.0, 0.0, STARRYNIGHT_MUSICFACTOR); // Green Twinkle
-        
+
         if (*poutEffect != NULL)
             return true;
     }
-    
+
     Println("Defaulting to creating a star from constructor");
 
     String starEffectName = doc->getMember("starEffect") | String("StarryNightEffect");
     String starTypeName = doc->getMember("starType") | String("BubblyStar");
 
     String paletteName = doc->getMember("palette");
-    CRGBPalette256* paletter;
+    CRGBPalette256 *paletter;
     if (!this->GetPaletterFromString(paletteName, &paletter))
         return false;
 
@@ -655,8 +660,7 @@ bool EffectsFactory::CreateStarryNightEffect(StaticJsonDocument<JSON_DOC_SIZE>* 
     return true;
 }
 
-
-bool EffectsFactory::GetPaletterFromString(String name, CRGBPalette256** pout)
+bool EffectsFactory::GetPaletterFromString(String name, CRGBPalette256 **pout)
 {
     if (name == "RGB")
         *pout = &RGBColors_p;

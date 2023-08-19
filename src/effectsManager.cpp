@@ -1,13 +1,15 @@
 #include "effectsManager.h"
 #include "globals.h"
 
-AppTime g_AppTime;                                      // Keeps track of frame times
-volatile float gVURatio = 1.0;                          // Current VU as a ratio to its recent min and max
-std::shared_ptr<LEDMatrixGFX> g_pStrands[NUM_CHANNELS]; // Each LED strip gets its own channel
+AppTime g_AppTime;             // Keeps track of frame times
+volatile float gVURatio = 1.0; // Current VU as a ratio to its recent min and max
+// std::shared_ptr<LEDMatrixGFX> m_pLedStrip; // Each LED strip gets its own channel
 
-EffectsManager::EffectsManager()
-    : _statusEffect(NULL), _currEffect(NULL), _factory(), _errReporter(NULL), _brightnes(255), _lastErrTime(0)
+EffectsManager::EffectsManager(uint8_t bChannelNum)
+    : _statusEffect(NULL), _currEffect(NULL), _factory(), _errReporter(NULL), _brightnes(255), _lastErrTime(0), _bChannelNum(bChannelNum)
 {
+    // m_pLedStrip = std::make_unique<LEDMatrixGFX>(MATRIX_WIDTH, MATRIX_HEIGHT);
+
     // effect = new BulgarianFlag();
     // effect = new Marquee(false);
     // effect = new RainbowComet(NUM_LEDS / 2);
@@ -36,63 +38,69 @@ EffectsManager::~EffectsManager()
 
 void EffectsManager::init(IErrorReporter *errReporter)
 {
-    // Initialize the strand controllers depending on how many channels we have
-    for (int i = 0; i < NUM_CHANNELS; i++)
-        g_pStrands[i] = std::make_unique<LEDMatrixGFX>(MATRIX_WIDTH, MATRIX_HEIGHT);
+    m_pLedStrip = std::make_unique<LEDMatrixGFX>(MATRIX_WIDTH, MATRIX_HEIGHT);
 
-#if NUM_CHANNELS == 1
-    pinMode(LED_PIN0, OUTPUT);
-    FastLED.addLeds<WS2812, LED_PIN0, COLOR_ORDER>(g_pStrands[0]->GetLEDBuffer(), g_pStrands[0]->GetLEDCount());
-    FastLED[0].setLeds(g_pStrands[0]->GetLEDBuffer(), g_pStrands[0]->GetLEDCount());
-#endif
+    if (_bChannelNum == 0)
+    {
+        pinMode(LED_PIN0, OUTPUT);
+        FastLED.addLeds<WS2812, LED_PIN0, COLOR_ORDER>(m_pLedStrip->GetLEDBuffer(), m_pLedStrip->GetLEDCount());
+    }
+    else if (_bChannelNum == 1)
+    {
+        pinMode(LED_PIN1, OUTPUT);
+        FastLED.addLeds<WS2812, LED_PIN1, COLOR_ORDER>(m_pLedStrip->GetLEDBuffer(), m_pLedStrip->GetLEDCount());
+    }
 
-#if NUM_CHANNELS >= 2
-    pinMode(LED_PIN0, OUTPUT);
-    FastLED.addLeds<WS2812B, LED_PIN0, COLOR_ORDER>(g_pStrands[0]->GetLEDBuffer(), g_pStrands[0]->GetLEDCount());
-
-    pinMode(LED_PIN1, OUTPUT);
-    FastLED.addLeds<WS2812B, LED_PIN1, COLOR_ORDER>(g_pStrands[1]->GetLEDBuffer(), g_pStrands[1]->GetLEDCount());
-#endif
-
-    FastLED.setBrightness(_brightnes);
+    FastLED[_bChannelNum].setLeds(m_pLedStrip->GetLEDBuffer(), m_pLedStrip->GetLEDCount());
 
     _errReporter = errReporter;
     _statusEffect = new StatusEffect();
-    _statusEffect->Init(g_pStrands);
+    _statusEffect->Init(m_pLedStrip);
 }
 
 void EffectsManager::changeEffect(String jsonParams)
 {
-    if (_currEffect != NULL)
+    int8_t iChannel = -1;
+    LEDStripEffect* newEffect = NULL;
+    bool result = _factory.CreateEffect(jsonParams, &iChannel, &newEffect);
+
+    bool bIgnore = iChannel >= 0 && iChannel != _bChannelNum;
+
+    if ((!result || !bIgnore) && _currEffect != NULL)
     {
         delete _currEffect;
         _currEffect = NULL;
     }
 
-    bool result = _factory.CreateEffect(jsonParams, &_currEffect);
     if (!result)
     {
+        if (newEffect != NULL) // Should not be allocated if we failed, but just in case.
+            delete newEffect;
+
         Println("Error: Effect creation failed!");
 
         _statusEffect->setError(StatusEffect::ERROR::GENERAL);
         _lastErrTime = millis();
         _errReporter->ReportError(_factory.getLastError());
-    }
-    else
-    {
-        _currEffect->Init(g_pStrands);
-        _errReporter->ReportError(String(""));
-        _statusEffect->setError(StatusEffect::ERROR::NONE);
 
-        Print("Effect successfully created -> ");
-        Println(_currEffect->FriendlyName());
+        return;
     }
+
+    if (bIgnore)
+        return;
+
+    _currEffect = newEffect;
+    _currEffect->Init(m_pLedStrip);
+    _errReporter->ReportError(String(""));
+    _statusEffect->setError(StatusEffect::ERROR::NONE);
+
+    Print("Effect successfully created -> ");
+    Println(_currEffect->FriendlyName());
 }
 
 void EffectsManager::setBrightnes(uint8_t value)
 {
     _brightnes = value;
-    FastLED.setBrightness(_brightnes);
 }
 
 void EffectsManager::loop()
@@ -112,7 +120,7 @@ void EffectsManager::loop()
     else
         _statusEffect->Draw();
 
-    FastLED.delay(20);
+    FastLED[_bChannelNum].show(m_pLedStrip->GetLEDBuffer(), m_pLedStrip->GetLEDCount(), _brightnes);
 }
 
 void EffectsManager::onWiFiStatusChanged(bool up)

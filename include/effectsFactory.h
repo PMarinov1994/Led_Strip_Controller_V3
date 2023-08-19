@@ -10,7 +10,7 @@
 class EffectsFactory
 {
 public:
-    bool CreateEffect(String jsonParams, LEDStripEffect** poutEffect);
+    bool CreateEffect(String jsonParams, int8_t* piChannel, LEDStripEffect** poutEffect);
     
     String getLastError()
     {

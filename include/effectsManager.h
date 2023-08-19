@@ -12,7 +12,7 @@ class EffectsManager
 {
 
 public:
-    EffectsManager();
+    EffectsManager(uint8_t bChannelNum);
     virtual ~EffectsManager();
 
 
@@ -39,6 +39,9 @@ private:
 
     uint8_t _brightnes;
     unsigned long _lastErrTime;
+    uint8_t _bChannelNum;
+
+    std::shared_ptr<LEDMatrixGFX> m_pLedStrip; // Each LED strip gets its own channel
 };
 
 #endif

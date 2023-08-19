@@ -92,12 +92,12 @@ private:
 		// Serial.printf("BouncingBallEffect params: ballCount=%d, bMirrored=%x, bErase=%x, ballSize=%d\n", ballCount, bMirrored, bErase, ballSize);
 	}
 
-    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx[NUM_CHANNELS])
+    virtual bool Init(std::shared_ptr<LEDMatrixGFX> gfx)
     {
         if (!LEDStripEffect::Init(gfx))
             return false;
 
-        _cLength = gfx[0]->GetLEDCount();
+        _cLength = gfx->GetLEDCount();
 
 		ClockTimeSinceLastBounce.resize(_cBalls);
 		TimeSinceLastBounce.resize(_cBalls);
@@ -140,7 +140,7 @@ private:
             {
                 if (randomDouble(0, 10)>5) 
                 {
-                    CRGB c = _GFX[0]->getPixel(j, 0);
+                    CRGB c = _GFX->getPixel(j, 0);
                     c.fadeToBlackBy(10);
                     setPixels(j, 1, c, false);
                 }
