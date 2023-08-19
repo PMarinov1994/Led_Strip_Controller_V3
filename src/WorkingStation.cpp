@@ -4,6 +4,8 @@
 
 struct CRGB;
 
+AppTime g_AppTime;             // Keeps track of frame times
+
 /*
  *	\brief Initialize the component
  *
@@ -13,14 +15,13 @@ bool CWorkingStation::Init()
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
         EffectsManager* pEffectsManager = new EffectsManager(i);
-
         pEffectsManager->init(this);
-        pEffectsManager->onWiFiStatusChanged(false);
-        pEffectsManager->onMqttStatusChanged(false);
-        pEffectsManager->loop();
 
         m_vecEffects.push_back(pEffectsManager);
     }
+
+    m_vecEffects.at(SYS_LED_CHANNEL)->onWiFiStatusChanged(false);
+    m_vecEffects.at(SYS_LED_CHANNEL)->loop();
 
     CConfigurationFile configFile;
     configFile.ParseConfiguration();
@@ -43,9 +44,9 @@ bool CWorkingStation::Init()
 
     ConnectToWifi();
 
-    m_vecEffects.at(0)->onWiFiStatusChanged(true);
-    m_vecEffects.at(0)->onMqttStatusChanged(false);
-    m_vecEffects.at(0)->loop();
+    m_vecEffects.at(SYS_LED_CHANNEL)->onWiFiStatusChanged(true);
+    m_vecEffects.at(SYS_LED_CHANNEL)->onMqttStatusChanged(false);
+    m_vecEffects.at(SYS_LED_CHANNEL)->loop();
 
     IPAddress mqttServerIPAddr;
     mqttServerIPAddr.fromString(configFile.m_mqttServerIP);
@@ -64,19 +65,21 @@ bool CWorkingStation::Init()
     // Connect to MQTT Broker.
     ReconnectMQTT();
 
-    m_vecEffects.at(0)->onMqttStatusChanged(true);
-    m_vecEffects.at(0)->loop();
+    m_vecEffects.at(SYS_LED_CHANNEL)->onMqttStatusChanged(true);
+    m_vecEffects.at(SYS_LED_CHANNEL)->loop();
 
     return true;
 }
 
-uint8_t uiLedState = LOW;
+
 
 /*
  *	\brief This will loop in main
  */
 void CWorkingStation::Work()
 {
+    g_AppTime.NewFrame();
+
     // Check WiFi state
     // and if down - try to reconnect
     if (WL_CONNECTED != WiFi.status())
@@ -104,7 +107,11 @@ void CWorkingStation::Work()
         m_client.loop();
 
         for (int i = 0; i < NUM_CHANNELS; i++)
-            m_vecEffects.at(i)->loop();
+        {
+            auto effectsManager = m_vecEffects.at(i);
+            if (effectsManager->getEnabled())
+                effectsManager->loop();
+        }
     }
 
     //
@@ -200,23 +207,26 @@ void CWorkingStation::PublishCurrPlayEffect()
 
     String strEffects = "";
     String strBrightness = "";
+    String strPower = "";
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
+        String strChannelNum = String("(") + String(i) + String(") ");
+
         EffectsManager* pEffectsManager = m_vecEffects.at(i);
-        strEffects += pEffectsManager->getCurrEffectName() + "\n";
-        strBrightness += String(pEffectsManager->getBrightnes()) + "\n";
+        strEffects += strChannelNum + pEffectsManager->getCurrEffectName() + "\n";
+        strBrightness += strChannelNum + String(pEffectsManager->getBrightnes()) + "\n";
+        strPower += strChannelNum + String(pEffectsManager->getEnabled()) + "\n";
     }
 
     bool pubStateResult = m_client.publish(reportCurrEffectTopic, strEffects.c_str(), false);
-    Print("Publishing curr play effect. Result: ");
-    Println(pubStateResult);
-
     pubStateResult &= m_client.publish(reportCurrBrightnessTopic, strBrightness.c_str(), false);
-    Print("Publishing curr brightness. Result: ");
-    Println(pubStateResult);
+    pubStateResult &= m_client.publish(reportCurrPowerStatus, strPower.c_str(), false);
 
     if (!pubStateResult)
+    {
+        Println("Could not report the status. Restarting...");
         ESP.restart();
+    }
 }
 
 void CWorkingStation::ReportError(String err)
@@ -253,6 +263,21 @@ void CWorkingStation::MQTT_Callback(char *topic, uint8_t *payload, unsigned int 
         // Channels will check if the payload is for them and if not they will ignore it.
         for (int i = 0; i < NUM_CHANNELS; i++)
             m_vecEffects.at(i)->changeEffect(value);
+
+        PublishCurrPlayEffect();
+    }
+    else if (0 == strcmp(topic, setPower))
+    {
+        char *buff = new char[length + 1];
+        NullTerminateArray(payload, length, (void **)&buff);
+
+        int value = strtol(buff, NULL, 10);
+
+        int iChannelNum = value / 10;
+        bool bEnabled = value % 10 == 1;
+
+        if (iChannelNum >= 0 && iChannelNum < NUM_CHANNELS)
+            m_vecEffects.at(iChannelNum)->setEnabled(bEnabled);
 
         PublishCurrPlayEffect();
     }

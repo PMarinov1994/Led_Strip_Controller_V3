@@ -97,13 +97,20 @@ const char WiFiAPPSK[] = "123456789";
 #define CONFIG_FILE_EQUALS '='
 #define CONFIG_FILE_END '#'
 
-const char stationID[] = "ESP8266_OUTSIDE_LED_CONTROLLER_TWO";
-const char reportErrorTopic[] = "outside_led_controller_two/get/error";
-const char reportCurrEffectTopic[] = "outside_led_controller_two/get/effect";
-const char reportCurrBrightnessTopic[] = "outside_led_controller_two/get/brightness";
-const char setEffectTopic[] = "outside_led_controller_two/set/effect";
-const char setBrightnessTopic[] = "outside_led_controller_two/set/brightness";
-const char subscribeTopic[] = "outside_led_controller_two/set/#";
+#define SYS_LED_CHANNEL 0
+
+#define CURR_MCU_TYPE "ESP8266"
+#define STATION_ID "outside_led_controller_two"
+
+const char stationID[] = CURR_MCU_TYPE "_" STATION_ID;
+const char reportErrorTopic[] = STATION_ID "/get/error";
+const char reportCurrEffectTopic[] = STATION_ID "/get/effect";
+const char reportCurrBrightnessTopic[] = STATION_ID "/get/brightness";
+const char reportCurrPowerStatus[] = STATION_ID "/get/power";
+const char setEffectTopic[] = STATION_ID "/set/effect";
+const char setBrightnessTopic[] = STATION_ID "/set/brightness";
+const char setPower[] = STATION_ID "/set/power";
+const char subscribeTopic[] = STATION_ID "/set/#";
 
 // !!! WARNING !!!!
 // ESP.restart() will fail if done after programing

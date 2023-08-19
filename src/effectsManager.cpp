@@ -1,12 +1,12 @@
 #include "effectsManager.h"
 #include "globals.h"
 
-AppTime g_AppTime;             // Keeps track of frame times
+extern AppTime g_AppTime;
 volatile float gVURatio = 1.0; // Current VU as a ratio to its recent min and max
 // std::shared_ptr<LEDMatrixGFX> m_pLedStrip; // Each LED strip gets its own channel
 
 EffectsManager::EffectsManager(uint8_t bChannelNum)
-    : _statusEffect(NULL), _currEffect(NULL), _factory(), _errReporter(NULL), _brightnes(255), _lastErrTime(0), _bChannelNum(bChannelNum)
+    : _statusEffect(NULL), _currEffect(NULL), _factory(), _errReporter(NULL), _brightnes(255), _lastErrTime(0), _bChannelNum(bChannelNum), _bEnabled(false)
 {
     // m_pLedStrip = std::make_unique<LEDMatrixGFX>(MATRIX_WIDTH, MATRIX_HEIGHT);
 
@@ -58,6 +58,18 @@ void EffectsManager::init(IErrorReporter *errReporter)
     _statusEffect->Init(m_pLedStrip);
 }
 
+
+void EffectsManager::setEnabled(bool bEnabled)
+{
+    this->_bEnabled = bEnabled;
+    if (!this->_bEnabled)
+    {
+        FastLED[_bChannelNum].clearLedData();
+        FastLED[_bChannelNum].showLeds();
+    }
+}
+
+
 void EffectsManager::changeEffect(String jsonParams)
 {
     int8_t iChannel = -1;
@@ -98,16 +110,18 @@ void EffectsManager::changeEffect(String jsonParams)
     Println(_currEffect->FriendlyName());
 }
 
+
+
 void EffectsManager::setBrightnes(uint8_t value)
 {
     _brightnes = value;
 }
 
+
+
 void EffectsManager::loop()
 {
-    g_AppTime.NewFrame();
-
-    if (StatusEffect::ERROR::NONE != _statusEffect->getError())
+    if (SYS_LED_CHANNEL == _bChannelNum && StatusEffect::ERROR::NONE != _statusEffect->getError())
     {
         _statusEffect->Draw();
 
@@ -120,7 +134,7 @@ void EffectsManager::loop()
     else
         _statusEffect->Draw();
 
-    FastLED[_bChannelNum].show(m_pLedStrip->GetLEDBuffer(), m_pLedStrip->GetLEDCount(), _brightnes);
+    FastLED[_bChannelNum].showLeds(_brightnes);
 }
 
 void EffectsManager::onWiFiStatusChanged(bool up)

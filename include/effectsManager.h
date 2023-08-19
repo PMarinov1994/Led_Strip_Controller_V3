@@ -19,7 +19,10 @@ public:
 public:
 
     void setBrightnes(uint8_t value);
+    void setEnabled(bool bEnabled);
+
     uint8_t getBrightnes() { return _brightnes; };
+    bool getEnabled() { return _bEnabled; };
 
     void init(IErrorReporter* errReporter);
     void changeEffect(String jsonParams);
@@ -40,6 +43,8 @@ private:
     uint8_t _brightnes;
     unsigned long _lastErrTime;
     uint8_t _bChannelNum;
+
+    bool _bEnabled;
 
     std::shared_ptr<LEDMatrixGFX> m_pLedStrip; // Each LED strip gets its own channel
 };
